@@ -30,6 +30,10 @@
    - $\frac{1}{G}$ = 再对 G 做一次平均
 - 每个符号给「是什么 + 起什么作用」。$r>1$ 代表新策略更倾向该动作；$\hat A>0$ 代表动作优于平均。
 
+**公式可移植性（踩过的坑，必守）：**
+- **别用 `\operatorname{mean}`/`\operatorname{clip}`，改用 `\mathrm{mean}`/`\mathrm{clip}`**。很多带白名单的 KaTeX viewer（含 GitHub）禁 `\operatorname`，会报 `macros are not allowed: operatorname`，公式整条挂掉。`\mathrm`/`\text` 效果一样、人人都认。
+- 公式里的 `<`、`>`（如 `o_{i,<t}`、`\hat A<0`）**照常写**——`scripts/md2pdf.py` 出 PDF 时已自动转义，不会被当成 HTML 标签吞掉。但若你直接把 md 丢进别的渲染器，注意它可能没处理这点。
+
 ## 器件 3 ── 直觉三段式（先直觉，后数学）
 
 引入任何新概念前，先建直觉：

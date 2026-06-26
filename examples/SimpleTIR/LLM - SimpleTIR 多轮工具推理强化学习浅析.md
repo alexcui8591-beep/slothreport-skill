@@ -61,7 +61,7 @@ SimpleTIR 把这个过程建模成**分层 MDP(Hierarchical MDP)**,拆成两层:
 
 策略用 **GRPO** 优化。GRPO 不需要单独训一个价值网络,而是对同一个 prompt 采样 $G$ 条轨迹,用**组内相对表现**算优势:
 
-$$\hat{A}_i = \frac{r_i - \operatorname{mean}(\{r_j\}_{j=1}^G)}{F_{\text{norm}}(\{r_j\}_{j=1}^G)}$$
+$$\hat{A}_i = \frac{r_i - \mathrm{mean}(\{r_j\}_{j=1}^G)}{F_{\text{norm}}(\{r_j\}_{j=1}^G)}$$
 
 - $r_i$:第 $i$ 条轨迹的终局奖励。
 - 分子 $r_i-\text{mean}(\cdot)$:**比组内平均好就为正、差就为负**——优于平均的鼓励,劣于平均的压制。
@@ -78,10 +78,10 @@ $$\mathcal{J}_{\text{TIR}}(\theta)=\mathbb{E}\left[\frac{1}{G}\sum_{i=1}^{G}\fra
 
 其中 $L_{\text{CLIP}}$ 是标准 PPO 裁剪目标、$\rho$ 是新旧策略的重要性采样比率:
 
-$$L_{\text{CLIP}}(\theta,i,t)=\min\big(\rho_{i,t}\hat{A}_i,\ \operatorname{clip}(\rho_{i,t},1-\varepsilon,1+\varepsilon)\hat{A}_i\big),\qquad \rho_{i,t}(\theta)=\frac{\pi_\theta(o_{i,t}\mid o_{i,<t})}{\pi_{\theta_{\text{old}}}(o_{i,t}\mid o_{i,<t})}$$
+$$L_{\text{CLIP}}(\theta,i,t)=\min\big(\rho_{i,t}\hat{A}_i,\ \mathrm{clip}(\rho_{i,t},1-\varepsilon,1+\varepsilon)\hat{A}_i\big),\qquad \rho_{i,t}(\theta)=\frac{\pi_\theta(o_{i,t}\mid o_{i,<t})}{\pi_{\theta_{\text{old}}}(o_{i,t}\mid o_{i,<t})}$$
 
 - $\rho_{i,t}$:新策略相对旧策略,对同一个 token 的概率之比。$\rho>1$ 表示新策略更倾向它。
-- $\operatorname{clip}(\cdot,1-\varepsilon,1+\varepsilon)$:把 $\rho$ 限制在信任区间内,防止一步更新跨太大。**这个 clip 是后面理解梯度爆炸的关键——它对 $\hat A<0$ 的情形只截下界、不截上界。**
+- $\mathrm{clip}(\cdot,1-\varepsilon,1+\varepsilon)$:把 $\rho$ 限制在信任区间内,防止一步更新跨太大。**这个 clip 是后面理解梯度爆炸的关键——它对 $\hat A<0$ 的情形只截下界、不截上界。**
 
 > ⚠️ 划重点:反馈掩码只是"不让工具反馈直接进梯度",但它**挡不住反馈把后续生成带偏**。这正是 SimpleTIR 要捅破的窗户纸。
 

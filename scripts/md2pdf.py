@@ -8,7 +8,7 @@
      正文中英文会全部空白(只有 SVG 公式和图能显示)。这是最坑的一步。
 公式用 MathJax(SVG)渲染;最后用无头 Chrome 打印 PDF。无需 TeX Live。
 """
-import re, sys, base64, pathlib, shutil, subprocess, markdown
+import re, sys, base64, pathlib, shutil, subprocess, html as _html, markdown
 
 SRC = pathlib.Path(sys.argv[1]).resolve()
 OUT = pathlib.Path(sys.argv[2]).resolve() if len(sys.argv) > 2 else SRC.with_suffix(".pdf")
@@ -23,9 +23,12 @@ text = re.sub(r"\$\$.+?\$\$", lambda m: stash(m, "D"), text, flags=re.S)
 text = re.sub(r"\$[^\$\n]+?\$", lambda m: stash(m, "I"), text)
 
 # --- 2) markdown -> html,再还原数学 ---
+# 关键:还原时把 < > & 转义成 HTML 实体,否则公式里的 o_{i,<t}、\hat A<0 的 '<'
+# 会被浏览器当成 HTML 标签起始而吞掉,打断 $$ 配对、整条公式渲染失败。
+# 浏览器会把实体解码回 < 给 MathJax,故不影响数学。
 body = markdown.markdown(text, extensions=["tables", "fenced_code", "attr_list", "sane_lists"])
 for k, v in store.items():
-    body = body.replace(k, v)
+    body = body.replace(k, _html.escape(v, quote=False))
 
 # --- 3) 图片 base64 内嵌 + <figure>/<figcaption> ---
 def img_repl(m):
