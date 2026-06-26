@@ -1,0 +1,31 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="slothreport sloth logo">
+  <!-- little branch the sloth hangs under -->
+  <rect x="20" y="20" width="160" height="11" rx="5.5" fill="#8a6d4b"/>
+  <circle cx="38" cy="25" r="3" fill="#6f553a"/>
+  <circle cx="120" cy="25" r="2.5" fill="#6f553a"/>
+  <!-- arms / claws over the branch -->
+  <path d="M66 30 q-12 -6 -16 6 q-2 8 8 9" fill="none" stroke="#9b7d54" stroke-width="9" stroke-linecap="round"/>
+  <path d="M134 30 q12 -6 16 6 q2 8 -8 9" fill="none" stroke="#9b7d54" stroke-width="9" stroke-linecap="round"/>
+  <!-- fur head -->
+  <circle cx="100" cy="112" r="70" fill="#b89968"/>
+  <!-- ear tufts -->
+  <circle cx="52" cy="84" r="14" fill="#a8854f"/>
+  <circle cx="148" cy="84" r="14" fill="#a8854f"/>
+  <!-- cream face -->
+  <ellipse cx="100" cy="118" rx="52" ry="56" fill="#f4e8d0"/>
+  <!-- signature dark eye stripes -->
+  <ellipse cx="76" cy="108" rx="15" ry="24" fill="#6b4a2b" transform="rotate(18 76 108)"/>
+  <ellipse cx="124" cy="108" rx="15" ry="24" fill="#6b4a2b" transform="rotate(-18 124 108)"/>
+  <!-- eyes -->
+  <circle cx="78" cy="112" r="9.5" fill="#3a2817"/>
+  <circle cx="122" cy="112" r="9.5" fill="#3a2817"/>
+  <circle cx="81" cy="109" r="3.2" fill="#fff"/>
+  <circle cx="125" cy="109" r="3.2" fill="#fff"/>
+  <!-- nose -->
+  <ellipse cx="100" cy="135" rx="11" ry="8" fill="#6b4a2b"/>
+  <!-- content sloth smile -->
+  <path d="M86 150 q14 11 28 0" fill="none" stroke="#6b4a2b" stroke-width="3.2" stroke-linecap="round"/>
+  <!-- rosy cheeks -->
+  <circle cx="60" cy="135" r="7" fill="#e8a87c" opacity="0.45"/>
+  <circle cx="140" cy="135" r="7" fill="#e8a87c" opacity="0.45"/>
+</svg>

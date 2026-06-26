@@ -3,7 +3,7 @@ name: slothreport
 description: 把一篇论文或一个算法深度解读成"教学式"中文 report——公式逐符号拆解、baseline↔new 的 diff 对比表、具体数字举例与生活类比、图表/表格/示意图齐全。当用户要"解读/浅析/深度分析/讲讲"某篇论文或算法、要产出图文公式齐全的解读报告(markdown / PDF / HTML)、或给了 arxiv 链接想要一份带前置铺垫和直觉解释的稿子时使用。不负责纯摘要(那是 summarizer)、不负责写新论文(那是 scientific-writer)。
 ---
 
-# slothreport —— 教学式论文/算法深度解读
+# 🦥 slothreport —— 教学式论文/算法深度解读
 
 ## 这个 skill 在追求什么
 

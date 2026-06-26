@@ -1,11 +1,17 @@
-# slothreport-skill
+<p align="center">
+  <img src="assets/sloth.svg" width="130" alt="slothreport sloth logo">
+</p>
 
-> 一个 Claude Code / Agent Skill：把一篇论文或一个算法，解读成**教学式、图文公式表格齐全**的中文 report，并能一键导出 PDF。
-> A Claude Agent Skill that turns a paper/algorithm into a **teaching-style deep-dive** with formulas, original figures, tables — and one-command PDF export.
+<h1 align="center">🦥 slothreport-skill</h1>
+
+<p align="center">
+  <em>慢工出细活 —— 把一篇论文／算法，解读成<strong>教学式、图文公式表格齐全</strong>的中文 report，并一键导出 PDF。</em><br>
+  <sub>A Claude Agent Skill that turns a paper/algorithm into a <strong>teaching-style deep-dive</strong> with formulas, original figures, tables — and one-command PDF export.</sub>
+</p>
 
 ![preview](assets/preview.png)
 
-## 它和普通"论文总结"有什么不同
+## 🦥 它和普通"论文总结"有什么不同
 
 普通 summarizer 给你平铺直叙的摘要；slothreport 追求**让没读过原文的人真的看懂**。它把一份好解读的"教学法"固化成了可复用的器件：
 
@@ -22,7 +28,7 @@
 
 ```bash
 # 方式一：作为 Claude skill 安装（推荐）
-npx skills add cuialex504/slothreport-skill        # 或手动 cp 到 ~/.claude/skills/slothreport
+npx skills add alexcui8591-beep/slothreport-skill   # 或手动 cp 到 ~/.claude/skills/slothreport
 
 # 首次使用前装一次前置（幂等，装过自动跳过）
 bash ~/.claude/skills/slothreport/scripts/setup.sh
@@ -46,7 +52,7 @@ skill 会：取论文源（arxiv 源码包，含原始图件）→ 定"主角 + 
 python3 ~/.claude/skills/slothreport/scripts/md2pdf.py "你的报告.md"   # 同名 PDF 落在旁边
 ```
 
-## 一键出 PDF：内置了三个"否则每次都要重踩"的坑
+## 🦥 一键出 PDF：内置了三个"否则每次都要重踩"的坑
 
 `scripts/md2pdf.py`（md → HTML+MathJax → 无头 Chrome）焊死了三个易错点：
 
@@ -81,3 +87,5 @@ slothreport-skill/
 ## License
 
 [MIT](LICENSE)。示例报告中的论文图件版权归原作者所有，仅作解读示意，见 examples 下的 NOTICE。
+
+<p align="center"><sub>🦥 慢，但每一处都讲透。</sub></p>
