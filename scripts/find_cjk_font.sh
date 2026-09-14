@@ -10,7 +10,11 @@ for f in \
   "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc" \
   "/System/Library/Fonts/Supplemental/Songti.ttc" \
   "/System/Library/Fonts/STHeiti Light.ttc" \
-  "/System/Library/Fonts/PingFang.ttc" ; do
+  "/System/Library/Fonts/PingFang.ttc" \
+  "/c/Windows/Fonts/Deng.ttf" \
+  "/c/Windows/Fonts/simhei.ttf" ; do
   [ -f "$f" ] && { echo "$f"; exit 0; }
 done
+# Windows 上找不到不算故障:Chrome 会走系统字体回退,中文照样渲染。
+# (md2pdf.py 在 Windows 上根本不调本脚本,改用原生路径探测,见 find_cjk_font()。)
 exit 1

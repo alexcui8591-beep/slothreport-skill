@@ -40,15 +40,27 @@ elif command -v uv >/dev/null 2>&1; then
 else warn "无 uv,跳过 arxiv-latex-mcp(改用下载 e-print 源码包取公式)"; fi
 
 # ---- 5) 出 PDF 需要的浏览器(只检测,不强装)----
+# Windows(Git Bash/MSYS)下 Chrome 和 Edge 都行,两者同为 Chromium 内核。
 CHROME=""
 for c in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
          "/Applications/Chromium.app/Contents/MacOS/Chromium" \
+         "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" \
+         "/c/Program Files/Google/Chrome/Application/chrome.exe" \
+         "/c/Program Files (x86)/Google/Chrome/Application/chrome.exe" \
+         "/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" \
          "$(command -v google-chrome 2>/dev/null)" "$(command -v chromium 2>/dev/null)"; do
   [ -n "$c" ] && [ -x "$c" ] && CHROME="$c" && break
 done
-[ -n "$CHROME" ] && ok "浏览器(出 PDF):$CHROME" || warn "未发现 Chrome/Chromium —— 出 PDF 需要它,请装一个;否则只出 markdown"
+[ -n "$CHROME" ] && ok "浏览器(出 PDF):$CHROME" || warn "未发现 Chrome/Chromium/Edge —— 出 PDF 需要它,请装一个;否则只出 markdown"
 
-# ---- 6) CJK 字体(出 PDF 必需,无头浏览器读不到系统字体)----
-"$(dirname "$0")/find_cjk_font.sh" >/dev/null 2>&1 && ok "找到可用 CJK 字体(出 PDF)" || warn "未找到单文件 CJK 字体,中文 PDF 可能空白(见 visuals_and_tools.md)"
+# ---- 6) CJK 字体(mac/Linux 出 PDF 必需,那里的无头浏览器读不到系统字体)----
+# Windows 例外:Chrome 会走系统字体回退,找不到单文件字体也不影响中文。
+if "$(dirname "$0")/find_cjk_font.sh" >/dev/null 2>&1; then
+  ok "找到可用 CJK 字体(出 PDF)"
+elif [ "${OS#MINGW}" != "$OS" ] || [ "${OS#MSYS}" != "$OS" ] || [ "${OS#CYGWIN}" != "$OS" ]; then
+  ok "未找到单文件 CJK 字体,但 Windows 上 Chrome 会用系统字体回退,中文正常"
+else
+  warn "未找到单文件 CJK 字体,中文 PDF 可能空白(见 visuals_and_tools.md)"
+fi
 
 say "完成。默认出 markdown 零依赖;出 PDF 需 浏览器 + CJK 字体。"

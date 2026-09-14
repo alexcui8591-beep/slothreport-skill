@@ -52,13 +52,16 @@ skill 会：取论文源（arxiv 源码包，含原始图件）→ 定"主角 + 
 python3 ~/.claude/skills/slothreport/scripts/md2pdf.py "你的报告.md"   # 同名 PDF 落在旁边
 ```
 
-## 🦥 一键出 PDF：内置了三个"否则每次都要重踩"的坑
+## 🦥 一键出 PDF：内置了四个"否则每次都要重踩"的坑
 
-`scripts/md2pdf.py`（md → HTML+MathJax → 无头 Chrome）焊死了三个易错点：
+`scripts/md2pdf.py`（md → HTML+MathJax → 无头 Chrome）焊死了四个易错点：
 
 1. **数学保护** — 渲染前把 `$...$`/`$$...$$` 抠出占位，避免 markdown 把公式里的 `_`、`*` 当强调符破坏，渲染后再还原交给 MathJax。
 2. **图片 base64 内嵌** — 把 `![](图片和附件/x.png)` 转成 data URI 内联，根治"相对路径 + 中文目录名导致图加载不出来"。
-3. **CJK 字体注入** — 无头 Chrome 读不到系统字体会把中英文**全渲成空白**；脚本用 `@font-face` 显式喂一个**单文件** CJK 字体（自动探测，mac 上是 Arial Unicode；`.ttc` 集合会加载失败，故只挑单文件），并用经典 `--headless` 规避 `--headless=new` 在 mac 上丢字体。
+3. **CJK 字体注入** — mac/Linux 的无头 Chrome 读不到系统字体，会把中英文**全渲成空白**；脚本用 `@font-face` 显式喂一个**单文件** CJK 字体（自动探测：mac 上是 Arial Unicode，Windows 上是 `Deng.ttf`/`simhei.ttf`；`.ttc` 集合会加载失败，故只挑单文件）。Windows 上找不到也无妨——那里的 Chrome 会走系统字体回退，中文照样渲染。
+4. **headless 模式分平台** — Chrome 132+ 已删掉经典 `--headless`，再传它会静默返回、PDF 根本不落地，所以非 mac 一律用 `--headless=new`；mac 保留经典模式（`--headless=new` 在 mac 上丢字体）。打印完脚本会核实 PDF 真的落地，没落地就打出 Chrome 的 stderr 并非零退出，不再假报成功。
+
+跨平台：mac / Linux / Windows 都能跑。浏览器路径按平台探测（Windows 上走环境变量，Chrome 和 Edge 都认），`file://` URI 一律用 `Path.as_uri()` 生成——手拼的话 Windows 的盘符、反斜杠和中文目录会直接把路径拼坏。
 
 无需 TeX Live。
 
