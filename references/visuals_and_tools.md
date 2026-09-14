@@ -67,13 +67,16 @@ bash "$SKILL_DIR/scripts/setup.sh"            # 首次：装 poppler/markdown �
 python3 "$SKILL_DIR/scripts/md2pdf.py" "报告.md"   # 出同名 PDF
 ```
 
-`md2pdf.py` 内置了三个**否则每次都要重踩的坑**：
+`md2pdf.py` 内置了四个**否则每次都要重踩的坑**：
 
 1. **数学保护**：渲染前把 `$...$`/`$$...$$` 抠出来占位，避免 markdown 把公式里的 `_`、`*` 当强调符破坏，渲染后再还原交给 MathJax。
 2. **图片 base64 内嵌**：把 `![](图片和附件/x.png)` 转成 data URI 内联——**这正是 md 里图加载不出来的根因**（相对路径 + 中文目录名，viewer 解析失败）；内嵌后任何 viewer 都加载得到。
-3. **CJK 字体注入（最坑）**：**无头 Chrome 读不到系统字体**，默认会把正文中英文**全部渲染成空白**（只有 SVG 公式和图能显示）。脚本用 `@font-face` 显式喂一个**单文件** CJK 字体（`find_cjk_font.sh` 自动找，mac 上是 `Arial Unicode.ttf`；`.ttc` 字体集合会加载失败，故只挑单文件），并用经典 `--headless` 而非 `--headless=new`（后者在 mac 上也丢字体）。
+3. **CJK 字体注入（最坑）**：**mac/Linux 的无头 Chrome 读不到系统字体**，默认会把正文中英文**全部渲染成空白**（只有 SVG 公式和图能显示）。脚本用 `@font-face` 显式喂一个**单文件** CJK 字体（`find_cjk_font.sh` 自动找，mac 上是 `Arial Unicode.ttf`；`.ttc` 字体集合会加载失败，故只挑单文件）。**Windows 是例外**：那里的 Chrome 会走系统字体回退，即使没探到单文件字体，中文也照样渲染——所以脚本在 Windows 上只提示一句，不再报 WARN 吓人（探测本身也走原生路径，优先 `Deng.ttf` / `simhei.ttf`）。
+4. **headless 模式分平台**：**Chrome 132+ 已经删掉了经典 `--headless`**，再传它会静默返回、PDF 根本不落地。所以脚本只在 mac 上保留经典 `--headless`（`--headless=new` 在 mac 上丢字体），其余平台一律 `--headless=new`。配套三件事：`--user-data-dir` 指向临时目录（别复用用户正开着的 Chrome profile，否则无头实例直接退出）、`file://` URI 用 `Path.as_uri()` 生成（手拼在 Windows 上必坏：盘符 + 反斜杠 + 中文目录）、打印后核实 PDF 真的落地，没落地就打出 Chrome 的 stderr 并非零退出。
 
 > 精简 Linux 上没单文件 CJK 字体时：`apt install fonts-noto-cjk`，`find_cjk_font.sh` 会自动捡到 Noto 的 `.otf`。
+> Windows 上 Chrome 和 Edge 都能用（同为 Chromium 内核），脚本按环境变量 `ProgramFiles` / `ProgramFiles(x86)` / `LOCALAPPDATA` 探测，不硬编码盘符。
+> 退出码：`2` = 没找到浏览器（HTML 已生成，可手动打印）；`3` = 浏览器跑了但没产出 PDF（会附 Chrome stderr）；`4` = 目标 PDF 被阅读器占用，先关掉再重跑。
 
 ## 取材工具
 

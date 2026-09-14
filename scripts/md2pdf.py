@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
 """slothreport: markdown -> PDF(图文公式齐全)。
 用法:  python3 md2pdf.py <report.md> [out.pdf]
-做对了三件易错的事:
+做对了四件易错的事:
   1) 渲染前先「保护」$...$/$$...$$ 数学,避免 markdown 把 _ * 当强调符破坏公式;
   2) 图片转 base64 内嵌(不依赖相对路径/中文目录名,viewer 一定加载得到);
-  3) 用 @font-face 显式喂一个单文件 CJK 字体 —— 否则无头 Chrome 读不到系统字体,
-     正文中英文会全部空白(只有 SVG 公式和图能显示)。这是最坑的一步。
+  3) 用 @font-face 显式喂一个单文件 CJK 字体 —— 否则 mac/Linux 的无头 Chrome 读不到系统字体,
+     正文中英文会全部空白(只有 SVG 公式和图能显示)。这是最坑的一步;
+  4) headless 模式分平台:Chrome 132+ 删了经典 --headless,传它会静默不出 PDF,
+     故非 mac 一律 --headless=new;mac 保留经典模式(新模式在 mac 上丢字体)。
 公式用 MathJax(SVG)渲染;最后用无头 Chrome 打印 PDF。无需 TeX Live。
+mac / Linux / Windows 都能跑:浏览器路径、file:// URI、headless 模式各平台分别处理,
+Windows 上还接受 Edge(同为 Chromium),且找不到 CJK 字体也不影响中文(系统字体回退)。
+退出码:2=没找到浏览器 3=浏览器没产出 PDF 4=目标 PDF 被阅读器占用。
 """
-import re, sys, base64, pathlib, shutil, subprocess, html as _html, markdown
+import re, os, sys, base64, pathlib, shutil, subprocess, tempfile, html as _html, markdown
+
+IS_MAC = sys.platform == "darwin"
+IS_WIN = os.name == "nt"
 
 SRC = pathlib.Path(sys.argv[1]).resolve()
 OUT = pathlib.Path(sys.argv[2]).resolve() if len(sys.argv) > 2 else SRC.with_suffix(".pdf")
@@ -42,17 +50,37 @@ def img_repl(m):
 body = re.sub(r'<img alt="(?P<alt>[^"]*)" src="(?P<src>[^"]+)"\s*/?>', img_repl, body)
 body = re.sub(r"<p>(<figure>.*?</figure>)</p>", r"\1", body, flags=re.S)
 
-# --- 4) 找单文件 CJK 字体(无头浏览器必需) ---
-finder = pathlib.Path(__file__).parent / "find_cjk_font.sh"
-font = ""
-try:
-    font = subprocess.run(["bash", str(finder)], capture_output=True, text=True).stdout.strip()
-except Exception:
-    pass
-font_face = f"@font-face{{font-family:'CJK';src:url('file://{font}');}}" if font else ""
+# --- 4) 找单文件 CJK 字体(mac/Linux 的无头浏览器必需) ---
+# Windows 例外:那里的 Chrome 会走系统字体回退,中文照样渲染,找不到只是少一层保险。
+WIN_CJK = ("Deng.ttf", "simhei.ttf", "simkai.ttf", "simfang.ttf", "STSONG.TTF",
+           "NotoSansSC-Regular.otf", "NotoSansCJKsc-Regular.otf")
+
+def find_cjk_font():
+    if IS_WIN:
+        # .ttc 字体集合在 @font-face 下常加载失败,故只挑单文件 ttf/otf。
+        dirs = [pathlib.Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts"]
+        if os.environ.get("LOCALAPPDATA"):  # 用户自装的字体在这里
+            dirs.append(pathlib.Path(os.environ["LOCALAPPDATA"]) / "Microsoft" / "Windows" / "Fonts")
+        for d in dirs:
+            for name in WIN_CJK:
+                if (d / name).exists():
+                    return str(d / name)
+        return ""
+    finder = pathlib.Path(__file__).parent / "find_cjk_font.sh"
+    try:
+        return subprocess.run(["bash", str(finder)], capture_output=True, text=True).stdout.strip()
+    except Exception:
+        return ""
+
+font = find_cjk_font()
+# 用 as_uri():Windows 路径带盘符和反斜杠,手拼 "file://" + path 得到的是坏 URI。
+font_face = f"@font-face{{font-family:'CJK';src:url('{pathlib.Path(font).as_uri()}');}}" if font else ""
 fam = "'CJK', sans-serif" if font else "sans-serif"
 if not font:
-    sys.stderr.write("WARN: 未找到单文件 CJK 字体,中文可能空白。装 Noto Sans CJK 或见 visuals_and_tools.md\n")
+    if IS_WIN:
+        sys.stderr.write("NOTE: 未找到单文件 CJK 字体,交给 Chrome 的系统字体回退(Windows 上中文正常显示)。\n")
+    else:
+        sys.stderr.write("WARN: 未找到单文件 CJK 字体,中文可能空白。装 Noto Sans CJK 或见 visuals_and_tools.md\n")
 
 html = f"""<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
 <script>window.MathJax={{tex:{{inlineMath:[['$','$']],displayMath:[['$$','$$']]}},svg:{{fontCache:'global'}}}};</script>
@@ -89,18 +117,59 @@ strong {{ color:#0a0a0a; }}
 html_path = OUT.with_suffix(".html")
 html_path.write_text(html, encoding="utf-8")
 
-# --- 5) 找浏览器,无头打印 PDF(用经典 --headless;--headless=new 在 mac 上常丢字体) ---
-candidates = [
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    "/Applications/Chromium.app/Contents/MacOS/Chromium",
-    shutil.which("google-chrome"), shutil.which("chromium"), shutil.which("chromium-browser"),
-]
-chrome = next((c for c in candidates if c and pathlib.Path(c).exists()), None)
+# --- 5) 找浏览器,无头打印 PDF ---
+def find_browser():
+    cands = [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    ]
+    # Windows:用环境变量拼,别硬编码盘符;Chrome/Edge 可能在 Program Files 也可能在用户目录。
+    for var in ("ProgramFiles", "ProgramFiles(x86)", "ProgramW6432", "LOCALAPPDATA"):
+        base = os.environ.get(var)
+        if not base:
+            continue
+        b = pathlib.Path(base)
+        cands += [str(b / "Google" / "Chrome" / "Application" / "chrome.exe"),
+                  str(b / "Microsoft" / "Edge" / "Application" / "msedge.exe"),
+                  str(b / "Chromium" / "Application" / "chrome.exe")]
+    cands += [shutil.which(n) for n in
+              ("google-chrome", "chromium", "chromium-browser", "chrome", "msedge")]
+    return next((c for c in cands if c and pathlib.Path(c).exists()), None)
+
+chrome = find_browser()
 if not chrome:
-    sys.stderr.write(f"WARN: 未找到 Chrome/Chromium。已生成 HTML: {html_path}\n请装浏览器,或自行把该 HTML 打印成 PDF。\n")
+    sys.stderr.write(f"WARN: 未找到 Chrome/Chromium/Edge。已生成 HTML: {html_path}\n请装浏览器,或自行把该 HTML 打印成 PDF。\n")
     sys.exit(2)
 
-subprocess.run([chrome, "--headless", "--disable-gpu", "--no-pdf-header-footer",
-                "--virtual-time-budget=30000", f"--print-to-pdf={OUT}", f"file://{html_path}"],
-               capture_output=True)
-print(f"PDF: {OUT}  ({OUT.stat().st_size//1024} KB, images inlined: {body.count('data:image')}, font: {font or 'NONE'})")
+# Chrome 132+ 删掉了经典 --headless:再传它会静默返回、PDF 根本不落地。
+# 但 --headless=new 在 mac 上常丢字体,所以只有非 mac 才切新模式。
+headless = "--headless" if IS_MAC else "--headless=new"
+# --user-data-dir 指向临时目录:不去碰用户正在跑的 Chrome profile,否则无头实例会直接退出。
+profile = tempfile.mkdtemp(prefix="md2pdf-chrome-")
+cmd = [chrome, headless, "--disable-gpu", "--no-sandbox", "--no-pdf-header-footer",
+       "--virtual-time-budget=40000", f"--user-data-dir={profile}",
+       f"--print-to-pdf={OUT}", html_path.as_uri()]  # as_uri():同样不能手拼 file://
+try:
+    if OUT.exists():
+        try:
+            OUT.unlink()  # 先删旧文件,免得把上一次的结果当成这次的成功
+        except PermissionError:
+            # Windows 常见:PDF 正开在 WPS/Acrobat 里,文件被锁,Chrome 写不进去。
+            sys.stderr.write(f"ERROR: 目标 PDF 被其他程序占用(阅读器开着?): {OUT}\n请先关掉它再重跑。\n")
+            sys.exit(4)  # finally 会清掉临时 profile
+    r = subprocess.run(cmd, capture_output=True, text=True, errors="replace")
+finally:
+    shutil.rmtree(profile, ignore_errors=True)
+
+# 必须核实文件真落地了 —— 老版本吞掉 stderr,打印失败时用户只会看到一行"成功"。
+if not OUT.exists() or OUT.stat().st_size == 0:
+    sys.stderr.write(f"ERROR: Chrome 退出码 {r.returncode},但没有产出 PDF: {OUT}\n")
+    sys.stderr.write("命令: " + " ".join(cmd) + "\n")
+    for label, stream in (("stderr", r.stderr), ("stdout", r.stdout)):
+        if stream and stream.strip():
+            sys.stderr.write(f"--- chrome {label} ---\n{stream.strip()}\n")
+    sys.stderr.write(f"HTML 仍然可用,可手动打印: {html_path}\n")
+    sys.exit(3)
+
+print(f"PDF: {OUT}  ({OUT.stat().st_size//1024} KB, images inlined: {body.count('data:image')}, font: {font or 'system fallback'})")
